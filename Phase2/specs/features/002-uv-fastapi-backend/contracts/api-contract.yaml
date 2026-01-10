@@ -1,0 +1,85 @@
+openapi: 3.0.0
+info:
+  title: Backend Development Environment API
+  version: 1.0.0
+  description: API for backend development environment setup and management
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the backend service
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2026-01-07T08:00:00Z"
+        '500':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Service unavailable"
+  /api/{user_id}/setup:
+    post:
+      summary: Initialize backend project
+      description: Sets up a new backend project with proper structure and dependencies
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_name:
+                  type: string
+                  description: Name for the new project
+                dependencies:
+                  type: array
+                  items:
+                    type: string
+                  description: List of dependencies to install
+      responses:
+        '201':
+          description: Project initialized successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project_path:
+                    type: string
+                    example: "/path/to/new/project"
+                  status:
+                    type: string
+                    example: "initialized"
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid project name"

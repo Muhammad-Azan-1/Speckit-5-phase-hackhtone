@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  backend:
+    build: .
+    container_name: fastapi-todo-backend
+    env_file:
+      - .env # Docker yahan se utha lega, lekin image ke andar pack nahi karega
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/backend-app # Syncs your live code edits into the container immediately
+      - /backend-app/.venv
+    restart: always

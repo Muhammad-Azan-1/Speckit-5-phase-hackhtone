@@ -1,3 +1,12 @@
+---
+title: Todo App Backend
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 # Backend Development Environment API
 
 This is a backend development environment API built with FastAPI and Python. It provides tools and endpoints for initializing and managing backend projects.
@@ -18,6 +27,12 @@ This is a backend development environment API built with FastAPI and Python. It 
 - SQLModel for database operations
 - Neon PostgreSQL
 - JWT for authentication
+
+## Deployment to Hugging Face Spaces
+
+This backend is configured for deployment on Hugging Face Spaces using Docker.
+
+For detailed, step-by-step deployment instructions, please read [README_DEPLOY.md](./README_DEPLOY.md).
 
 ## Setup and Installation
 

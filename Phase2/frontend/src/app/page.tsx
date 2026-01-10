@@ -23,7 +23,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 flex flex-col items-center justify-center">
       <LandingHeader />
-      <main className="max-w-4xl w-full text-center space-y-6 md:space-y-8 animate-in fade-in zoom-in duration-500 pt-32 px-4 pb-12">
+      <main className="max-w-4xl w-[100%] text-center space-y-6 md:space-y-8 animate-in fade-in zoom-in duration-500 pt-32 px-4 pb-12">
         {/* Animated Badge */}
         <div className="inline-flex items-center rounded-full border px-6 py-3 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground hover:bg-primary/80 mb-4 cursor-pointer">
           Welcome to Todo App 🎉

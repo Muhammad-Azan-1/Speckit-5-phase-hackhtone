@@ -18,9 +18,10 @@ RUN uv sync --frozen --no-install-project
 # 5. Copy the rest of your code
 COPY . .
 
-# 6. Expose the port (FastAPI defaults to 8000)
-EXPOSE 8000
+# 6. Expose the port (Hugging Face Spaces defaults to 7860)
+EXPOSE 7860
 
 # 7. Start the app
 # Use 'uv run' to automatically use the virtual environment created by uv
-CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# We serve on port 7860 to match Hugging Face Spaces requirements
+CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]

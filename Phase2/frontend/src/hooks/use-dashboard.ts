@@ -70,7 +70,7 @@ export function useDashboard() {
         error: null,
       });
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('Error fetching the dashboard data:', error);
       setData({
         stats: null,
         categories: [],

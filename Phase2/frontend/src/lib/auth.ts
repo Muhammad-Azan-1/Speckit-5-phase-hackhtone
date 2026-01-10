@@ -48,12 +48,12 @@ export const auth = betterAuth({
     secret: process.env.BETTER_AUTH_SECRET,
 
     // Base URL for auth endpoints
-    baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+    baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000",
 
     // Trust host header for proper URL generation
     // Include backend URL and Vercel deployment URLs
     trustedOrigins: [
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000", process.env.BETTER_AUTH_URL || "http://localhost:3000",
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000", process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000",
         // "https://speckit-5-phase-hackhtone.vercel.app",
     ],
 

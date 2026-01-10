@@ -39,6 +39,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const onSubmit = async (data: RegisterFormData) => {
     try {
       // Call Better Auth registration API
+      console.log('📝 Starting signup for:', data.email);
       const response = await signUp.email({
         name: data.name,
         email: data.email,
@@ -46,7 +47,10 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
         callbackURL: '/login', // Redirect to login after verification link is clicked
       });
 
+      console.log('📝 Signup response:', response);
+
       if (response.error) {
+        console.error('📝 Signup error:', response.error);
         throw new Error(response.error.message || 'Registration failed');
       }
 

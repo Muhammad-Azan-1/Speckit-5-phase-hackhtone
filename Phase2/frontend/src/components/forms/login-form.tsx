@@ -36,6 +36,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const isLoading = form.formState.isSubmitting;
 
   const onSubmit = async (data: LoginFormData) => {
+    console.log(process.env.NEXT_PUBLIC_BETTER_AUTH_URL)
     try {
       // Call Better Auth login API
       const response = await signIn.email({

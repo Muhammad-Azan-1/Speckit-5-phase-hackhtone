@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getJWTToken } from './auth-client';
 
 // Get the API URL from environment variables
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -14,9 +15,9 @@ export const api = axios.create({
 
 // Add request interceptor to include JWT token in all requests
 api.interceptors.request.use(
-  (config) => {
-    // Get the token from wherever it's stored (localStorage, cookie, etc.)
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null;
+  async (config) => {
+    // Get the token from Better Auth session
+    const token = await getJWTToken();
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -36,7 +37,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token might be expired or invalid, redirect to login
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth-token');
         window.location.href = '/login';
       }
     }

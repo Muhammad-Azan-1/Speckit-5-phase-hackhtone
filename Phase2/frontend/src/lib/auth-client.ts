@@ -7,8 +7,16 @@
 import { createAuthClient } from "better-auth/react";
 import { jwtClient } from "better-auth/client/plugins";
 
+// Dynamically determine the base URL - works on any Vercel deployment
+const getBaseURL = () => {
+    if (typeof window !== 'undefined') {
+        return window.location.origin; // Use current browser URL
+    }
+    return process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000";
+};
+
 export const authClient = createAuthClient({
-    baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000",
+    baseURL: getBaseURL(),
     plugins: [
         jwtClient(), // Enable JWT token retrieval for FastAPI integration
     ],

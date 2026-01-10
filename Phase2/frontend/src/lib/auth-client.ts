@@ -3,15 +3,12 @@
  * 
  * Client-side helper for making authenticated requests.
  * Use this in React components to interact with Better Auth.
- * 
- * NOTE: baseURL is intentionally omitted so it defaults to the current window origin.
- * This ensures it works on any Vercel deployment URL automatically.
  */
 import { createAuthClient } from "better-auth/react";
 import { jwtClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
-    // baseURL intentionally omitted - defaults to window.location.origin in browser
+    baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000",
     plugins: [
         jwtClient(), // Enable JWT token retrieval for FastAPI integration
     ],

@@ -34,7 +34,7 @@ app.add_middleware(APIRateLimitMiddleware)
 # Configure CORS middleware (Must be adding LAST to be the OUTERMOST middleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "https://speckit-5-phase-hackhtone.vercel.app").split(","),
+    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

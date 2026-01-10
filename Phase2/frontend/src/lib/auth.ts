@@ -51,8 +51,11 @@ export const auth = betterAuth({
     baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
 
     // Trust host header for proper URL generation
+    // Include backend URL and Vercel deployment URLs
     trustedOrigins: [
         process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
+        // Allow Vercel production domain
+        "https://speckit-5-phase-hackhtone.vercel.app",
     ],
 
     // Plugins for JWT support (required for FastAPI integration)

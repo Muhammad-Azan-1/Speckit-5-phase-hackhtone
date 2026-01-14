@@ -115,6 +115,7 @@ export function useTaskMutations() {
         mutate(`${process.env.NEXT_PUBLIC_API_URL}/api/tasks/stats`);
         mutate(`${process.env.NEXT_PUBLIC_API_URL}/api/tasks/today?limit=5`);
         mutate(`${process.env.NEXT_PUBLIC_API_URL}/api/tasks/stats/categories`);
+        mutate(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`);
     };
 
     const updateTaskCompletion = async (taskId: number, completed: boolean) => {

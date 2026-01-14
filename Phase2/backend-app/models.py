@@ -78,3 +78,27 @@ class UserPreferences(SQLModel, table=True):
     show_completed_tasks: bool = Field(default=True, description="Whether to show completed tasks")
     date_format: str = Field(default="MM/DD/YYYY", description="Date format preference")
     updated_at: datetime = Field(default_factory=datetime.utcnow, description="Timestamp when preferences were last updated")
+
+
+class Conversation(SQLModel, table=True):
+    """
+    Conversation entity representing a chat session between a user and the AI assistant
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: str = Field(..., description="User identifier from Better Auth JWT token", index=True)
+    summary: Optional[str] = Field(default=None, description="Summary of the conversation (first 100 characters)", max_length=100)
+    created_at: datetime = Field(default_factory=datetime.utcnow, description="Timestamp when the conversation was created")
+    updated_at: datetime = Field(default_factory=datetime.utcnow, description="Timestamp when the conversation was last updated")
+
+
+class Message(SQLModel, table=True):
+    """
+    Message entity representing an individual message within a conversation
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    conversation_id: int = Field(..., foreign_key="conversation.id", description="Associated conversation ID", index=True)
+    user_id: str = Field(..., description="User identifier from Better Auth JWT token", index=True)
+    role: str = Field(..., description="Message role (user/assistant/system)", regex=r"^(user|assistant|system)$")
+    content: str = Field(..., description="Message content", max_length=1000)
+    summary: Optional[str] = Field(default=None, description="Summary of the message (first 100 characters)", max_length=100)
+    created_at: datetime = Field(default_factory=datetime.utcnow, description="Timestamp when the message was created")

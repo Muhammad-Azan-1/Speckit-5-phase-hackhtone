@@ -60,6 +60,8 @@ This project uses three integrated systems:
 
 ---
 
+## Phase II: Full-Stack Web App
+
 ## Project Structure Evolution
 
 ### Current State
@@ -1832,3 +1834,642 @@ This constitution establishes the foundational principles and rules for the Todo
 
 **Key Principle:**
 This constitution defines WHAT and WHY, not HOW. The HOW belongs in specifications and documentation.
+
+
+
+# 🎯 PHASE III: AI CHATBOT INTEGRATION (CURRENT FOCUS)
+
+## ⚠️ IMPLEMENTATION DIRECTIVE
+
+**STATUS**: Phase II (Full-Stack Web App) is COMPLETE and WORKING.
+**CURRENT TASK**: Add conversational AI interface alongside existing UI.
+**PRINCIPLE**: We are ADDING, not REPLACING. Both interfaces must coexist.
+
+---
+
+## 1. PROJECT CONTEXT
+
+### What Already Exists (Phase II - DO NOT MODIFY)
+```
+✅ Frontend: Next.js task management UI at /app/(dashboard)/todos
+✅ Backend: REST API endpoints (GET/POST/PUT/PATCH/DELETE /api/{user_id}/tasks)
+✅ Database: Task table with id, title, description, completed, user_id, created_at, updated_at, category_id
+✅ Authentication: Better Auth with JWT tokens (EdDSA algorithm via JWKS)
+✅ Categories: Full category management system integrated with tasks
+✅ Dashboard: Analytics and user preferences
+✅ Deployment: Working frontend and backend deployed
+```
+
+### What We're Adding (Phase III - IMPLEMENT THIS)
+```
+🆕 Frontend: ChatKit interface at /app/(dashboard)/chat
+🆕 Backend: Chat endpoint POST /api/{user_id}/chat
+🆕 AI Layer: OpenAI Agents SDK for natural language processing
+🆕 MCP Server: Python MCP server exposing 5 task operation tools
+🆕 Database: Conversation and Message tables for chat history
+🆕 MCP Integration: Official MCP SDK for tool communication
+```
+
+# IMPORTANT SPECS STRUCTURE : 
+Category,Specification Location,Focus
+Backend Features,specs/features/
+MCP Servers,specs/mcp/
+Agents,specs/agents/
+API,specs/api/
+API,specs/api/
+Database,specs/dor schema/
+---
+
+## 2. ARCHITECTURE OVERVIEW
+
+### Dual Interface Pattern
+```
+User can manage tasks via:
+1. Traditional UI (/todos) → Direct manipulation (Phase II)
+2. Chat Interface (/chat) → Natural language (Phase III)
+
+Both interfaces → Same database → Same task operations
+```
+
+### System Flow
+```
+┌─────────────────┐     ┌──────────────────────────────────────┐     ┌─────────────┐
+│  ChatKit UI     │────▶│  FastAPI Backend                     │     │   Neon DB   │
+│  /app/chat      │     │  POST /api/{user_id}/chat            │     │             │
+│                 │     │         ↓                            │     │  - tasks    │
+│                 │     │  OpenAI Agents SDK                   │     │  - categories│
+│                 │     │         ↓                            │────▶│  - convos   │
+│                 │     │  MCP Server (5 tools)                │     │  - messages │
+│                 │◀────│         ↓                            │◀────│  - users    │
+│                 │     │  Database Operations                 │     │  - preferences│
+└─────────────────┘     └──────────────────────────────────────┘     └─────────────┘
+```
+
+---
+
+## 3. TECHNOLOGY STACK (PHASE III)
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Chat UI** | OpenAI ChatKit | Pre-built conversational interface |
+| **AI Agent** | OpenAI Agents SDK | Natural language understanding |
+| **MCP Server** | Official Python MCP SDK | Tool interface for AI agent |
+| **Backend** | FastAPI (existing) | New /chat endpoint |
+| **Database** | Neon PostgreSQL (existing) | Add 2 new tables |
+| **Auth** | Better Auth (existing) | JWT tokens (EdDSA via JWKS) for chat endpoint |
+
+---
+
+## 4. DATABASE SCHEMA (NEW TABLES)
+
+### Conversation Table
+```python
+class Conversation(SQLModel, table=True):
+    __tablename__ = "conversations"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: str = Field(..., description="User identifier from Better Auth JWT token")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+```
+
+### Message Table
+```python
+class Message(SQLModel, table=True):
+    __tablename__ = "messages"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    conversation_id: int = Field(..., foreign_key="conversations.id", index=True)
+    user_id: str = Field(..., description="User identifier from Better Auth JWT token")
+    role: str = Field(..., description="Either 'user' or 'assistant'")  # "user" or "assistant"
+    content: str = Field(..., description="The message content")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+```
+
+**Migration Required**: Create Alembic/Aerich migration for these 2 tables only.
+
+---
+
+## 5. MCP SERVER SPECIFICATION
+
+### Location
+```
+backend-app/
+├── mcp/
+│   ├── __init__.py
+│   ├── server.py          # MCP server entry point
+│   └── tools/
+│       ├── __init__.py
+│       └── task_tools.py  # 5 task operation tools
+```
+
+### Required Tools (Must Implement All 5)
+
+#### Tool 1: add_task
+```python
+@mcp_server.tool(
+    name="add_task",
+    description="Create a new task in the database"
+)
+def add_task(user_id: str, title: str, description: str = "", category_id: Optional[int] = None) -> dict:
+    """
+    Create a new task in database.
+
+    Args:
+        user_id: The authenticated user's ID from JWT token
+        title: The task title (required)
+        description: Optional task description
+        category_id: Optional category ID to associate with task
+
+    Returns:
+        Dictionary with task_id, status, and title
+    """
+    # Insert into tasks table with user_id validation
+    # Return: {"task_id": int, "status": "created", "title": str}
+```
+
+#### Tool 2: list_tasks
+```python
+@mcp_server.tool(
+    name="list_tasks",
+    description="Retrieve tasks with optional filtering by status"
+)
+def list_tasks(user_id: str, status: str = "all") -> list[dict]:
+    """
+    Retrieve tasks filtered by status.
+
+    Args:
+        user_id: The authenticated user's ID from JWT token
+        status: Filter status - "all", "pending", or "completed" (default: "all")
+
+    Returns:
+        List of task dictionaries with id, title, completed status, and optional category
+    """
+    # Query: all | pending | completed with user_id validation
+    # Return: [{"id": int, "title": str, "completed": bool, "category_name": str}, ...]
+```
+
+#### Tool 3: complete_task
+```python
+@mcp_server.tool(
+    name="complete_task",
+    description="Mark a task as complete or incomplete"
+)
+def complete_task(user_id: str, task_id: int) -> dict:
+    """
+    Toggle task completion status in database.
+
+    Args:
+        user_id: The authenticated user's ID from JWT token
+        task_id: The ID of the task to update
+
+    Returns:
+        Dictionary with task_id, status, and title
+    """
+    # Update completed=True/False with user_id validation
+    # Return: {"task_id": int, "status": "completed"/"incompleted", "title": str}
+```
+
+#### Tool 4: delete_task
+```python
+@mcp_server.tool(
+    name="delete_task",
+    description="Remove a task from the database"
+)
+def delete_task(user_id: str, task_id: int) -> dict:
+    """
+    Remove task from database.
+
+    Args:
+        user_id: The authenticated user's ID from JWT token
+        task_id: The ID of the task to delete
+
+    Returns:
+        Dictionary with task_id, status, and title
+    """
+    # Delete from tasks table with user_id validation
+    # Return: {"task_id": int, "status": "deleted", "title": str}
+```
+
+#### Tool 5: update_task
+```python
+@mcp_server.tool(
+    name="update_task",
+    description="Modify task title, description, or category"
+)
+def update_task(
+    user_id: str,
+    task_id: int,
+    title: Optional[str] = None,
+    description: Optional[str] = None,
+    category_id: Optional[int] = None
+) -> dict:
+    """
+    Modify task title, description or category.
+
+    Args:
+        user_id: The authenticated user's ID from JWT token
+        task_id: The ID of the task to update
+        title: New title (optional)
+        description: New description (optional)
+        category_id: New category ID (optional)
+
+    Returns:
+        Dictionary with task_id, status, and title
+    """
+    # Update fields if provided with user_id validation
+    # Return: {"task_id": int, "status": "updated", "title": str}
+```
+
+**Key Principle**: All tools are STATELESS - they read/write database directly with proper user_id validation.
+
+---
+
+## 6. CHAT API ENDPOINT
+
+### Route Definition
+```python
+# backend-app/routes/chat.py
+from fastapi import APIRouter, Depends
+from typing import Optional
+from pydantic import BaseModel
+
+router = APIRouter(prefix="/api/{user_id}")
+
+class ChatRequest(BaseModel):
+    conversation_id: Optional[int] = None  # Optional: creates new if None
+    message: str  # Required: user's natural language input
+
+class ChatResponse(BaseModel):
+    conversation_id: int
+    response: str  # Assistant's reply
+    tool_calls: list[dict]  # Which MCP tools were invoked
+
+@router.post("/chat")
+async def chat(
+    user_id: str,
+    request: ChatRequest,
+    current_user: str = Depends(get_current_user)  # From auth.py
+):
+    """
+    Stateless chat endpoint with Better Auth JWT validation.
+
+    Flow:
+    1. Validate user_id matches current_user from JWT
+    2. Fetch/create conversation from DB
+    3. Fetch message history from DB
+    4. Store user message in DB
+    5. Build prompt with history + new message
+    6. Run OpenAI Agent with MCP tools
+    7. Store assistant response in DB
+    8. Return response + tool_calls
+    """
+    # Verify user_id matches authenticated user (from auth.py verify_user_access)
+    verify_user_access(user_id, current_user)
+
+    # Implementation details...
+```
+
+### Request Schema
+```python
+class ChatRequest(BaseModel):
+    conversation_id: int | None = None  # Optional: creates new if None
+    message: str  # Required: user's natural language input
+```
+
+### Response Schema
+```python
+class ChatResponse(BaseModel):
+    conversation_id: int
+    response: str  # Assistant's reply
+    tool_calls: list[dict]  # Which MCP tools were invoked
+```
+
+---
+
+## 7. AGENT BEHAVIOR SPECIFICATION
+
+### Natural Language Mapping
+
+| User Says | Agent Action | MCP Tool(s) Called |
+|-----------|-------------|-------------------|
+| "Add a task to buy groceries" | Extract title → Create task | `add_task(user_id="...", title="Buy groceries")` |
+| "Show me all my tasks" | List with no filter | `list_tasks(user_id="...", status="all")` |
+| "What's pending?" | List incomplete tasks | `list_tasks(user_id="...", status="pending")` |
+| "Mark task 3 as complete" | Update task status | `complete_task(user_id="...", task_id=3)` |
+| "Delete the meeting task" | Find by title → Delete | `list_tasks(user_id="...")` then `delete_task(user_id="...", task_id=X)` |
+| "Change task 1 to 'Call mom tonight'" | Update title | `update_task(user_id="...", task_id=1, title="Call mom tonight")` |
+| "Add grocery shopping in the home category" | Create with category | `add_task(user_id="...", title="grocery shopping", category_id=X)` |
+
+### Agent Personality
+- **Tone**: Friendly, concise, confirmatory
+- **Example**: "✓ Added 'Buy groceries' to your list. Anything else?"
+- **Error Handling**: "I couldn't find task #5. Here are your current tasks: ..."
+- **Category Support**: "I've added 'grocery shopping' to your 'Home' category."
+
+---
+
+## 8. FRONTEND IMPLEMENTATION (CHATKIT)
+
+### Location
+```
+frontend/src/
+├── app/(dashboard)/
+│   ├── todos/          # Existing (Phase II) - DO NOT MODIFY
+│   └── chat/           # NEW (Phase III)
+│       ├── page.tsx    # ChatKit integration
+│       └── layout.tsx  # Chat-specific layout
+├── components/
+│   └── chat/           # Chat-specific components if needed
+```
+
+### ChatKit Setup
+```typescript
+// app/(dashboard)/chat/page.tsx
+"use client";
+
+import { ChatKit } from '@openai/chatkit';
+import { useAuth } from '@/hooks/use-auth'; // From existing auth system
+
+export default function ChatPage() {
+  const { user, getToken } = useAuth();
+
+  return (
+    <div className="flex flex-col h-screen">
+      <header className="p-4 border-b">
+        <h1 className="text-2xl font-bold">Task Assistant</h1>
+      </header>
+      <div className="flex-1">
+        <ChatKit
+          apiEndpoint={`${process.env.NEXT_PUBLIC_API_URL}/api/${user?.id}/chat`}
+          headers={{
+            Authorization: `Bearer ${getToken()}`,
+            'Content-Type': 'application/json'
+          }}
+          placeholder="Ask me to add, show, or complete tasks..."
+        />
+      </div>
+    </div>
+  );
+}
+```
+
+### Navigation Integration
+Add a link in the existing dashboard navigation to switch between /todos and /chat interfaces.
+
+### Domain Allowlist (CRITICAL)
+Before deployment:
+1. Deploy frontend to Vercel → Get URL (e.g., `https://your-app.vercel.app`)
+2. Add domain at: https://platform.openai.com/settings/organization/security/domain-allowlist
+3. Get domain key → Add to `.env.local`: `NEXT_PUBLIC_OPENAI_DOMAIN_KEY=...`
+
+**Without domain allowlist, ChatKit will NOT work in production.**
+
+---
+
+## 9. STATELESS CONVERSATION FLOW
+```
+Request arrives at /api/{user_id}/chat endpoint
+         ↓
+1. Validate user_id matches JWT token (from auth.py)
+         ↓
+2. Fetch conversation from DB (or create new)
+         ↓
+3. Fetch all messages for this conversation
+         ↓
+4. Store user's new message in DB
+         ↓
+5. Build message array: [history... + new_message]
+         ↓
+6. Call OpenAI Agent with MCP tools
+         ↓
+7. Agent invokes tool(s) → MCP server → Database
+         ↓
+8. Agent returns response
+         ↓
+9. Store assistant response in DB
+         ↓
+10. Return JSON to frontend
+         ↓
+Server forgets everything (ready for next request)
+```
+
+**Key**: Server holds ZERO state between requests. All context is in database.
+
+---
+
+## 10. IMPLEMENTATION CHECKLIST
+
+### Backend Tasks
+- [ ] Create `Conversation` and `Message` models in `backend-app/models.py`
+- [ ] Create database migration for new tables (using existing migration system)
+- [ ] Implement MCP server with 5 tools (`backend-app/mcp/server.py`)
+- [ ] Create chat endpoint (`backend-app/routes/chat.py`)
+- [ ] Integrate OpenAI Agents SDK with MCP tools
+- [ ] Add JWT validation to chat endpoint (reuse from auth.py)
+- [ ] Test stateless conversation flow
+- [ ] Ensure user isolation (user can only access own conversations)
+
+### Frontend Tasks
+- [ ] Install OpenAI ChatKit: `npm install @openai/chatkit`
+- [ ] Create `/src/app/(dashboard)/chat/page.tsx`
+- [ ] Configure ChatKit with backend endpoint and auth headers
+- [ ] Add navigation link: Tasks UI ↔ Chat UI
+- [ ] Set up domain allowlist on OpenAI platform
+- [ ] Add `NEXT_PUBLIC_OPENAI_DOMAIN_KEY` to .env.local
+- [ ] Test with existing auth context
+
+### Testing Tasks
+- [ ] Test each MCP tool independently
+- [ ] Test natural language commands in chat
+- [ ] Verify conversation history persists across sessions
+- [ ] Test both interfaces work (Tasks UI + Chat UI)
+- [ ] Verify authentication works for chat endpoint
+- [ ] Test category functionality through chat
+- [ ] Verify user isolation (can't access others' conversations)
+
+---
+
+## 11. CRITICAL CONSTRAINTS
+
+### ❌ DO NOT DO
+1. ❌ Modify existing REST API endpoints from Phase II
+2. ❌ Change Task or Category table schema (they're already correct)
+3. ❌ Remove or alter /app/(dashboard)/todos UI
+4. ❌ Store conversation state in server memory (must be in DB)
+5. ❌ Use localStorage or sessionStorage in MCP tools
+6. ❌ Bypass JWT authentication validation
+7. ❌ Allow cross-user data access in conversations
+
+### ✅ MUST DO
+1. ✅ Keep Phase II fully functional while adding Phase III
+2. ✅ Make all MCP tools stateless (database-backed with user validation)
+3. ✅ Validate user_id in chat endpoint matches JWT token from auth.py
+4. ✅ Store every message (user + assistant) in database with user_id
+5. ✅ Handle errors gracefully (task not found, invalid input)
+6. ✅ Support all existing features (categories, filtering, etc.) through chat
+7. ✅ Maintain the same security model as existing endpoints
+
+---
+
+## 12. SUCCESS CRITERIA
+
+### Functional Requirements
+✓ User can chat with bot to add/list/complete/delete/update tasks
+✓ Chat interface (ChatKit) works alongside existing task UI
+✓ Conversation history persists across browser sessions
+✓ All MCP tools execute correctly and update database with proper user validation
+✓ Authentication protects chat endpoint (Better Auth JWT required)
+✓ Support for categories through natural language
+✓ Error handling for invalid requests and missing tasks
+
+### Technical Requirements
+✓ Stateless backend - no in-memory conversation state
+✓ MCP server exposes all 5 required tools
+✓ OpenAI Agents SDK integrated with MCP tools
+✓ Database has Conversation and Message tables with proper user_id relations
+✓ ChatKit domain allowlist configured for production
+✓ User isolation maintained (users can only access their own conversations)
+
+---
+
+## 13. DEVELOPMENT WORKFLOW
+
+### Step 1: Database Setup
+```bash
+# Add new models to existing models.py
+# Create migration using existing migration system in backend-app/
+# Upgrade database
+```
+
+### Step 2: Implement MCP Server
+```bash
+# Create MCP server structure in backend-app/mcp/
+# Implement 5 tools in backend-app/mcp/tools/task_tools.py
+# Create server.py with MCP SDK
+```
+
+### Step 3: Create Chat Endpoint
+```bash
+# Add route to backend-app/routes/chat.py
+# Integrate OpenAI Agents SDK + MCP tools
+# Reuse authentication from backend-app/auth.py
+```
+
+### Step 4: Frontend Chat UI
+```bash
+# Create src/app/(dashboard)/chat/page.tsx
+# Configure ChatKit with backend endpoint and auth
+# Integrate with existing navigation
+```
+
+### Step 5: Test & Deploy
+```bash
+# Test locally with both interfaces
+# Deploy frontend (Vercel) → Get URL
+# Add domain to OpenAI allowlist
+# Test production chatbot
+```
+
+---
+
+## 14. REFERENCE EXAMPLES
+
+### Example Chat Conversation
+```
+User: "Add a task to buy groceries in the errands category"
+Bot: ✓ Added "buy groceries" to your list in the "Errands" category. What else can I help with?
+
+User: "Show my pending tasks"
+Bot: You have 3 pending tasks:
+     1. Buy groceries (Errands)
+     2. Call mom
+     3. Pay bills
+
+User: "Mark task 2 as done"
+Bot: ✓ Marked "Call mom" as complete. Great job!
+```
+
+### Example MCP Tool Call
+```python
+# User: "Add buy milk in shopping category"
+# Agent detects intent → Calls:
+result = add_task(
+    user_id="user123",
+    title="Buy milk",
+    description="",
+    category_id=5  # Shopping category
+)
+# Returns: {"task_id": 42, "status": "created", "title": "Buy milk"}
+```
+
+---
+
+## 15. TROUBLESHOOTING GUIDE
+
+### Issue: ChatKit not loading
+→ Check domain allowlist on OpenAI platform
+→ Verify `NEXT_PUBLIC_OPENAI_DOMAIN_KEY` is set
+
+### Issue: Agent not calling tools
+→ Check MCP server is running
+→ Verify agent is configured with MCP tool list
+→ Check tool schemas match expected parameters
+
+### Issue: Conversation not persisting
+→ Verify messages are being saved to database
+→ Check conversation_id is being passed correctly
+→ Ensure database connection is stable
+
+### Issue: Authentication failing
+→ Verify JWT token is being passed correctly from frontend
+→ Check that user_id in URL matches JWT token user_id
+→ Confirm auth.py functions are working properly
+
+### Issue: Cross-user access
+→ Verify all MCP tools validate user_id against the data being accessed
+→ Check that conversation queries filter by user_id
+
+---
+
+## 16. PHASE III DELIVERABLES
+
+### Code Repository
+- ✅ backend-app/mcp/ → MCP server implementation
+- ✅ backend-app/routes/chat.py → Chat endpoint
+- ✅ frontend/src/app/(dashboard)/chat/ → ChatKit UI
+- ✅ Migration scripts for Conversation and Message tables
+- ✅ Updated README with Phase III setup
+
+### Working Application
+- ✅ Chat interface at /chat route
+- ✅ Natural language task management with full feature parity
+- ✅ Conversation history preserved with user isolation
+- ✅ Both UIs functional (Tasks + Chat) with shared backend
+- ✅ Authentication enforced with Better Auth JWT tokens
+- ✅ Category support through chat interface
+
+---
+
+## 🎯 IMPLEMENTATION FOCUS SUMMARY
+
+**READ THIS FIRST WHEN IMPLEMENTING:**
+
+1. **Phase II is COMPLETE** → Do not modify existing REST API or Tasks UI
+2. **Add, don't replace** → Both interfaces must work simultaneously
+3. **Stateless architecture** → All conversation state in database with user validation
+4. **MCP is key** → 5 tools are the bridge between AI and database
+5. **Security first** → Maintain same user isolation as existing endpoints
+6. **Full feature parity** → Chat interface supports all existing functionality including categories
+7. **Test both paths** → User can manage tasks via UI OR chat with same underlying operations
+
+**When in doubt:**
+- Reference existing auth.py for JWT validation patterns
+- Look at existing routes/tasks.py for proper user_id validation
+- Keep Phase II code intact while extending functionality
+- Ask for clarification before breaking existing features
+
+---
+
+END OF PHASE III SPECIFICATION
+```

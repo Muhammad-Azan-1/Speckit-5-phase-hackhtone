@@ -1,8 +1,12 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+"""
+Unified Server for Production Deployment
+Combines FastAPI backend with MCP server for deployment on Hugging Face
+"""
 import os
 import threading
 import time
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from routes.setup import router as setup_router
 from routes.tasks import router as tasks_router
@@ -17,18 +21,14 @@ from rate_limit_general import APIRateLimitMiddleware
 # Load environment variables
 load_dotenv()
 
-# Import MCP server components for AI Agent integration
+# Import MCP server components
 from mcp.server import FastMCP
 from task_mcp.tools.task_tools import (
     add_task as task_add_tool,
     list_tasks as task_list_tool,
     complete_task as task_complete_tool,
     delete_task as task_delete_tool,
-    delete_task as task_delete_tool,
-    update_task as task_update_tool,
-    add_category as category_add_tool,
-    list_categories as category_list_tool,
-    delete_category as category_delete_tool
+    update_task as task_update_tool
 )
 from pydantic import BaseModel, Field
 from jose import jwt, JWTError
@@ -37,75 +37,49 @@ from typing import Optional, Dict, Any
 import json
 from datetime import datetime
 
-# MCP server thread reference
-mcp_thread = None
-
-
-def run_mcp_server_background():
-    """Run MCP server in background thread"""
-    import uvicorn
-    mcp_app = mcp.streamable_http_app()
-    mcp_port = int(os.getenv("MCP_PORT", 8808))
-    print(f"[MCP] Starting MCP server on port {mcp_port}...")
-    uvicorn.run(mcp_app, host="0.0.0.0", port=mcp_port, log_level="warning")
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global mcp_thread
-    
     # Create database tables on startup
     create_db_and_tables()
-    
-    # Start MCP server in background thread
-    mcp_thread = threading.Thread(target=run_mcp_server_background, daemon=True)
-    mcp_thread.start()
-    print("[MCP] Background MCP server thread started")
-    
-    # Give MCP server time to start
-    time.sleep(1)
-    
     yield
-    
-    # Cleanup on shutdown
-    print("[MCP] Shutting down...")
+    # Cleanup on shutdown if needed
 
 
-# Create FastAPI app instance
-app = FastAPI(
+# Create main FastAPI app instance
+main_app = FastAPI(
     title="Todo API - Backend Development Environment",
     version="1.0.0",
     lifespan=lifespan
 )
 
 # Add rate limiting middleware
-app.add_middleware(APIRateLimitMiddleware)
+main_app.add_middleware(APIRateLimitMiddleware)
 
 # Configure CORS middleware (Must be adding LAST to be the OUTERMOST middleware)
-app.add_middleware(
+main_app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Auth is handled via dependency injection in routes (get_current_user)
 
 # Include setup, task, dashboard, category, and chat routes
-app.include_router(setup_router)
-app.include_router(tasks_router)
-app.include_router(dashboard_router)
-app.include_router(categories_router)
-app.include_router(user_router)
-app.include_router(chat_router)
+main_app.include_router(setup_router)
+main_app.include_router(tasks_router)
+main_app.include_router(dashboard_router)
+main_app.include_router(categories_router)
+main_app.include_router(user_router)
+main_app.include_router(chat_router)
 
 
-@app.get("/")
+@main_app.get("/")
 async def root():
     return {"message": "Todo API Backend is running!"}
 
 
-@app.get("/health")
+@main_app.get("/health")
 async def health_check():
     """Health check endpoint - returns the health status of the backend service"""
     return {
@@ -114,7 +88,7 @@ async def health_check():
     }
 
 
-# Create MCP server instance for AI Agent tools
+# Create MCP server instance
 mcp = FastMCP("Task Management MCP Server", json_response=True)
 
 
@@ -161,9 +135,18 @@ def add_task_wrapper(
     user_id: str,
     title: str,
     description: str = "",
-    category_id: Optional[int] = None
+    category_id: Optional[int] = None,
+    authorization: Optional[str] = None
 ) -> dict:
-    """Create a new task. Requires user_id, title. Optional: description, category_id."""
+    """
+    Wrapper for the add_task tool to match the specification.
+    """
+    # Verify the user from authorization header
+    current_user_id = verify_jwt_token(authorization)
+
+    if not current_user_id or current_user_id != user_id:
+        return {"error": "Unauthorized: Invalid or missing token or user mismatch"}
+
     return task_add_tool(user_id, title, description, category_id)
 
 
@@ -173,13 +156,19 @@ def add_task_wrapper(
 )
 def list_tasks_wrapper(
     user_id: str,
-    status: str = "all"
+    status: str = "all",
+    authorization: Optional[str] = None
 ) -> list:
-    """Get tasks. Requires user_id. Optional status: 'all', 'pending', 'completed'."""
-    print(f"[MCP list_tasks] user_id={user_id}, status={status}")
-    result = task_list_tool(user_id, status)
-    print(f"[MCP list_tasks] result={result}")
-    return result
+    """
+    Wrapper for the list_tasks tool to match the specification.
+    """
+    # Verify the user from authorization header
+    current_user_id = verify_jwt_token(authorization)
+
+    if not current_user_id or current_user_id != user_id:
+        return [{"error": "Unauthorized: Invalid or missing token or user mismatch"}]
+
+    return task_list_tool(user_id, status)
 
 
 @mcp.tool(
@@ -188,9 +177,18 @@ def list_tasks_wrapper(
 )
 def complete_task_wrapper(
     user_id: str,
-    task_id: int
+    task_id: int,
+    authorization: Optional[str] = None
 ) -> dict:
-    """Mark task as complete. Requires user_id and task_id."""
+    """
+    Wrapper for the complete_task tool to match the specification.
+    """
+    # Verify the user from authorization header
+    current_user_id = verify_jwt_token(authorization)
+
+    if not current_user_id or current_user_id != user_id:
+        return {"error": "Unauthorized: Invalid or missing token or user mismatch"}
+
     return task_complete_tool(user_id, task_id)
 
 
@@ -200,9 +198,18 @@ def complete_task_wrapper(
 )
 def delete_task_wrapper(
     user_id: str,
-    task_id: int
+    task_id: int,
+    authorization: Optional[str] = None
 ) -> dict:
-    """Delete a task. Requires user_id and task_id."""
+    """
+    Wrapper for the delete_task tool to match the specification.
+    """
+    # Verify the user from authorization header
+    current_user_id = verify_jwt_token(authorization)
+
+    if not current_user_id or current_user_id != user_id:
+        return {"error": "Unauthorized: Invalid or missing token or user mismatch"}
+
     return task_delete_tool(user_id, task_id)
 
 
@@ -215,46 +222,19 @@ def update_task_wrapper(
     task_id: int,
     title: Optional[str] = None,
     description: Optional[str] = None,
-    category_id: Optional[int] = None
+    category_id: Optional[int] = None,
+    authorization: Optional[str] = None
 ) -> dict:
-    """Update a task. Requires user_id, task_id. Optional: title, description, category_id."""
+    """
+    Wrapper for the update_task tool to match the specification.
+    """
+    # Verify the user from authorization header
+    current_user_id = verify_jwt_token(authorization)
+
+    if not current_user_id or current_user_id != user_id:
+        return {"error": "Unauthorized: Invalid or missing token or user mismatch"}
+
     return task_update_tool(user_id, task_id, title, description, category_id)
-
-
-@mcp.tool(
-    name="add_category",
-    description="Create a new task category"
-)
-def add_category_wrapper(
-    user_id: str,
-    name: str,
-    icon: str = "📁"
-) -> dict:
-    """Create a new category. Requires user_id, name. Optional: icon."""
-    return category_add_tool(user_id, name, icon)
-
-
-@mcp.tool(
-    name="list_categories",
-    description="Retrieve task categories"
-)
-def list_categories_wrapper(
-    user_id: str
-) -> list:
-    """List categories. Requires user_id."""
-    return category_list_tool(user_id)
-
-
-@mcp.tool(
-    name="delete_category",
-    description="Delete a task category"
-)
-def delete_category_wrapper(
-    user_id: str,
-    category_id: int
-) -> dict:
-    """Delete a category. Requires user_id, category_id."""
-    return category_delete_tool(user_id, category_id)
 
 
 @mcp.tool()
@@ -263,31 +243,29 @@ def health_check() -> Dict[str, Any]:
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
 
 
-# Note: MCP server mount removed - AI agent now uses direct tool calls instead of HTTP
-
-
 def run_mcp_server():
     """Function to run the MCP server in a separate thread"""
-    print("MCP server functionality is available in the main application.")
-    print("For production deployment, MCP server should be deployed separately.")
-    print("For development, you can run 'python mcp_server.py' in a separate terminal.")
+    import uvicorn
 
-    # For now, just indicate that the MCP tools are available
-    import time
+    # Create the MCP server app using the streamable HTTP transport
+    mcp_app = mcp.streamable_http_app()
+
+    # Run on MCP port (different from main API port)
     mcp_port = int(os.getenv("MCP_PORT", 8808))
-    print(f"MCP tools are registered and available on port {mcp_port} (simulated)")
+    print(f"Starting MCP server on port {mcp_port}")
 
-    # Keep the thread alive
-    while True:
-        time.sleep(60)
+    uvicorn.run(mcp_app, host="0.0.0.0", port=mcp_port)
 
 
 if __name__ == "__main__":
     import uvicorn
     import sys
 
-    # Check if we should run both servers
-    if len(sys.argv) > 1 and sys.argv[1] == "both":
+    # Determine which server to run based on command line arguments
+    if len(sys.argv) > 1 and sys.argv[1] == "mcp":
+        # Run only the MCP server
+        run_mcp_server()
+    elif len(sys.argv) > 1 and sys.argv[1] == "both":
         # Run both servers - MCP in a separate thread and main API in main thread
         mcp_thread = threading.Thread(target=run_mcp_server, daemon=True)
         mcp_thread.start()
@@ -301,16 +279,15 @@ if __name__ == "__main__":
 
         # Run the main API server
         uvicorn.run(
-            app,
+            main_app,
             host="0.0.0.0",
             port=int(os.getenv("PORT", 8000)),
             log_level="info"
         )
     else:
-        # Run only the main API server (default for Hugging Face deployment)
-        print("Starting main API server...")
+        # Run only the main API server (default)
         uvicorn.run(
-            app,
+            main_app,
             host="0.0.0.0",
             port=int(os.getenv("PORT", 8000)),
             log_level="info"

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { LayoutDashboard, CheckSquare, Settings, Menu, Home } from 'lucide-react'
+import { LayoutDashboard, CheckSquare, Settings, Menu, Home, MessageCircle } from 'lucide-react'
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
     mobile?: boolean
@@ -30,6 +30,12 @@ export function Sidebar({ className, mobile, onClose }: SidebarProps) {
             icon: CheckSquare,
             href: '/todos',
             active: pathname === '/todos',
+        },
+        {
+            label: 'Chat',
+            icon: MessageCircle,
+            href: '/chat',
+            active: pathname === '/chat',
         },
         {
             label: 'Settings',

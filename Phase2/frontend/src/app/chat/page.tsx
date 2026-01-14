@@ -352,14 +352,14 @@ export default function ChatPage() {
                       setEditingConversation(conv.id);
                     }}
                   >
-                    <Pencil className="h-4 w-4 mr-2" />
+                    <Pencil className="cursor-pointer h-4 w-4 mr-2" />
                     Rename
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive"
                     onClick={(e) => deleteConversation(conv.id, e)}
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="cursor-pointer h-4 w-4 mr-2" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>

@@ -310,6 +310,14 @@ async def process_chat_message_route(
         session.add(user_message)
         session.commit()
 
+        # Auto-set conversation title from first message if not set
+        if not conversation.summary:
+            # Use first 50 chars of message as title
+            conversation.summary = chat_request.message[:50] + ("..." if len(chat_request.message) > 50 else "")
+            session.add(conversation)
+            session.commit()
+            session.refresh(conversation)
+
         # Get conversation history for context
         history_stmt = select(Message).where(
             Message.conversation_id == conversation.id

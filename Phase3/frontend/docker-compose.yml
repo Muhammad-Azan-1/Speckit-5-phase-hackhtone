@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  frontend:
+    build: .
+    container_name: nextjs-todo-frontend
+    env_file:
+      - .env   # Docker yahan se utha lega, lekin image ke andar pack nahi karega
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app  # Syncs your live code edits into the container immediately
+      - /app/node_modules
+    
+    restart: always

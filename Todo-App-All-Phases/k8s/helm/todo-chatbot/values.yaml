@@ -1,0 +1,100 @@
+# Default values for todo-chatbot
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+frontend:
+  enabled: true
+  image:
+    repository: frontend-frontend
+    tag: v5-prod
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+backend:
+  enabled: true
+  image:
+    repository: backend-app-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    DISABLE_EMBEDDED_MCP: "true"
+    DATABASE_URL: "postgresql://neondb_owner:npg_AbC1jLHB7Vmq@ep-rough-wind-ahpeoh1v-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+    BETTER_AUTH_SECRET: "sEt0IGHINAQ1ZRSEFJk0xatsI3jaXG3e"
+    JWT_ALGORITHM: "HS256"
+    CORS_ORIGINS: "http://localhost:3000,https://speckit-5-phase-hackhtone.vercel.app"
+    BETTER_AUTH_URL: "http://todo-chatbot-frontend:3000"
+    RESEND_API_KEY: "re_jB5TmYDY_MNS5tfbXvY7jQQwWyNFpJTvY"
+    ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+    APP_NAME: "Backend Development Environment API"
+    DEBUG: "True"
+    PORT: "7860"
+    MCP_PORT: "8808"
+    MCP_SERVER_URL: "http://todo-chatbot-mcp-server:8808/mcp"
+    HF_SPACE_URL: "http://localhost:8000"
+    OPENAI_API_KEY: "CHANGE_ME"
+
+mcpServer:
+  enabled: true
+  image:
+    repository: backend-app-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 8808
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - host: todo.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+config:
+  NEXT_PUBLIC_API_URL: "http://localhost:8000"
+  NEXT_PUBLIC_BETTER_AUTH_URL: "http://localhost:3000"
+  LOG_LEVEL: "DEBUG"
+
+# Database configuration (external - Neon PostgreSQL)
+database:
+  external: true
+  url: "postgresql://neondb_owner:npg_AbC1jLHB7Vmq@ep-rough-wind-ahpeoh1v-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"

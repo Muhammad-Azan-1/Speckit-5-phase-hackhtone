@@ -1,0 +1,96 @@
+  const handleAddCategory = async () => {
+    if (newCategory.name.trim() === '') {
+      toast.error('Category name is required');
+      return;
+    }
+
+    try {
+      setSavingCategory(true);
+      const token = await getJWTToken();
+      if (!token) {
+        toast.error('Not authenticated');
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/categories`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: newCategory.name,
+            icon: newCategory.icon,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to create category');
+      }
+
+      const createdCategory = await response.json();
+      mutateCategories(); 
+      setNewCategory({ name: '', icon: '📝' });
+      toast.success('Category created successfully!');
+    } catch (err) {
+      toast.error('Failed to create category');
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    try {
+      const token = await getJWTToken();
+      if (!token) return;
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/categories/${id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error('Failed');
+
+      mutateCategories();
+      toast.success('Category deleted successfully!');
+    } catch (err: any) {
+      toast.error('Failed to delete category');
+    }
+  };
+
+  const handleUpdateCategoryIcon = async (id: number, icon: string) => {
+    try {
+      const token = await getJWTToken();
+      if (!token) return;
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/categories/${id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: categories?.find((c: Category) => c.id === id)?.name,
+            icon: icon,
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error('Failed');
+
+      mutateCategories();
+      toast.success('Category updated!');
+    } catch (err) {
+      toast.error('Failed to update category');
+    }
+  };

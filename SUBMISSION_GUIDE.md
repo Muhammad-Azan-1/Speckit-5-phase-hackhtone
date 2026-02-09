@@ -110,3 +110,15 @@ minikube start
 - **Phase4** uses `Todo-App-All-Phases` as it contains the working K8s deployment
 - All phases include comprehensive README files
 - Environment variables are documented in respective folders
+
+
+
+
+<!-- 
+
+> /specs  I have completed phase4 of my hackhtone you cawn view the constituion.md and other files to understand all the
+  implmentation now wee need to work on phase5 you can also view the hackhtone document at @"Hackathon II - Todo Spec-Driven
+  Development.md"
+  I want you to please undertand the hackhtone phase 5 requirments then start writing the specs to work on phase5
+
+  ultrathink -->

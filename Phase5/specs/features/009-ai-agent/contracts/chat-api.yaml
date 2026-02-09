@@ -1,0 +1,110 @@
+openapi: 3.0.3
+info:
+  title: AI Chat Agent API
+  description: API for interacting with the AI agent for task management
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://your-api-domain.com
+    description: Production server
+
+paths:
+  /api/{user_id}/chat:
+    post:
+      summary: Process a chat message with the AI agent
+      description: Send a natural language message to the AI agent and receive a response
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: The user's ID from Better Auth JWT token
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: Successful response from the AI agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '401':
+          description: Unauthorized - Invalid or expired JWT token
+        '403':
+          description: Forbidden - User ID in path doesn't match JWT token
+        '500':
+          description: Internal server error
+      security:
+        - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        conversation_id:
+          type: integer
+          description: Optional conversation ID to continue existing conversation
+          example: 123
+        message:
+          type: string
+          description: The user's natural language message
+          example: "Add a task to buy groceries"
+          minLength: 1
+          maxLength: 1000
+
+    ChatResponse:
+      type: object
+      required:
+        - conversation_id
+        - response
+        - tool_calls
+      properties:
+        conversation_id:
+          type: integer
+          description: The conversation ID (newly created if none was provided)
+          example: 123
+        response:
+          type: string
+          description: The AI agent's response to the user
+          example: "I've added 'buy groceries' to your task list."
+        tool_calls:
+          type: array
+          description: List of MCP tools that were called as a result of the message
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: The name of the MCP tool that was called
+                example: "add_task"
+              arguments:
+                type: object
+                description: Arguments passed to the MCP tool
+                example:
+                  user_id: "user123"
+                  title: "buy groceries"
+              result:
+                type: object
+                description: Result returned by the MCP tool
+                example:
+                  task_id: 456
+                  status: "created"
+                  title: "buy groceries"
+
+security:
+  - BearerAuth: []
